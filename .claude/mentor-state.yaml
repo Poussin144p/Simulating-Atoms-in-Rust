@@ -34,12 +34,15 @@ user_profile:
     - Maths quantiques (Laguerre, Legendre, Schrödinger)
 
 progress:
-  current_day: 2
-  next_topic: "Méthodes sur les structs (impl), afficher une particule"
+  current_day: 3
+  next_topic: "Coordonnées sphériques (r, θ, φ), nombres quantiques n/l/m, fonction d'onde générale"
   completed_days:
     - day: 1
       date: "2026-05-13"
       topic: "Setup Rust, structs Particle et Engine, ownership"
+    - day: 2
+      date: "2026-05-13"
+      topic: "impl blocks, &self vs &mut self, Vec::push, boucle for, densité de probabilité hydrogène"
 
 mastery:
   ownership:
@@ -53,6 +56,18 @@ mastery:
   cargo:
     status: validated
     correct_count: 3
+    last_seen: "2026-05-13"
+  impl_methods:
+    status: validated
+    correct_count: 3
+    last_seen: "2026-05-13"
+  self_mut_self:
+    status: validated
+    correct_count: 3
+    last_seen: "2026-05-13"
+  vec_and_loops:
+    status: practicing
+    correct_count: 2
     last_seen: "2026-05-13"
 
 evaluations: []
