@@ -1,0 +1,10 @@
+L'objectif est de m'apprendre le rust en refaisant ce projet : https://github.com/kavan010/Atoms
+Il y a une vidéo associée :le script est dans le dossier /references.
+A toi de trouver la doc de rust et les bons usages, j'utilise vs code mais je n'ai pas installé quoique ce soit.
+
+
+NOTA :
+OWNERSHIP EN RUST
+
+une valeur a un seul propriétaire à la fois, et quand le propriétaire est détruit, la valeur est détruite avec lui. 
+Ce n'est pas limité aux attributs d'un struct — ça s'applique à toute variable.

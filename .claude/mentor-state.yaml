@@ -1,0 +1,64 @@
+initialized_at: "2026-05-13"
+
+objective:
+  mode: learning
+  description: >
+    Porter le projet C++ de simulation atomique quantique (github.com/kavan010/Atoms)
+    vers Rust. Apprentissage de Rust via reconstruction complète — structs, ownership,
+    rendu OpenGL, maths physiques (Schrödinger, polynômes de Laguerre/Legendre).
+  reference_project: "https://github.com/kavan010/Atoms"
+  reference_video_script: "references/Simulating Atoms in C++.txt"
+
+pedagogy:
+  mode: available
+
+stack:
+  detected:
+    - name: Rust
+      version: "1.95.0"
+      status: initialized
+      project: atoms-sim
+  docs_loaded: []
+
+user_profile:
+  level: beginner_rust
+  experience: >
+    Diplôme ingénieur logiciel. A lu les 10 premiers chapitres de The Rust Book
+    il y a 2 ans (notions oubliées). Quelques bases en physique (mécanique quantique
+    de surface). Pas de connaissance C++.
+  constraints: "Solo dev, projet portfolio"
+  known_gaps:
+    - lifetimes
+    - traits
+    - OpenGL bindings en Rust
+    - Maths quantiques (Laguerre, Legendre, Schrödinger)
+
+progress:
+  current_day: 2
+  next_topic: "Méthodes sur les structs (impl), afficher une particule"
+  completed_days:
+    - day: 1
+      date: "2026-05-13"
+      topic: "Setup Rust, structs Particle et Engine, ownership"
+
+mastery:
+  ownership:
+    status: practicing
+    correct_count: 1
+    last_seen: "2026-05-13"
+  structs:
+    status: practicing
+    correct_count: 1
+    last_seen: "2026-05-13"
+  cargo:
+    status: validated
+    correct_count: 3
+    last_seen: "2026-05-13"
+
+evaluations: []
+
+memory:
+  decisions: []
+  known_debt: []
+
+docs_history: []
