@@ -126,7 +126,7 @@ fn legendre(l: i32, m: i32, x: f64) -> f64 {
 }
 
 
-fn sample_r(n: i32, l: i32) -> f64 {
+fn build_cdf_r(n: i32, l: i32) -> (Vec<f64>, f64, f64) {
     let a0 = 0.529_f64;
     let n_points = 2048;
     let r_max = 10.0 * (n * n) as f64 * a0;
@@ -151,15 +151,18 @@ fn sample_r(n: i32, l: i32) -> f64 {
         *v /= sum;
     }
 
-    // 3. Tirer u aléatoire et trouver le r correspondant.
-    let u: f64 = rand::rng().random();
-    let idx = cdf.partition_point(|&v| v < u);
-
-    idx as f64 * dr
+    return (cdf, dr, r_max);
 }
 
 
-fn sample_theta(l: i32, m: i32) -> f64 {
+fn sample_r(cdf: &[f64], dr: f64) -> f64 {
+    let u = rand::rng().random::<f64>();
+    let idx = cdf.partition_point(|&v|v < u);
+    return idx as f64 * dr;
+}
+
+
+fn build_cdf_theta(l: i32, m: i32) -> (Vec<f64>, f64) {
     let n_points = 2048;
     let theta_max = std::f64::consts::PI;
     let dtheta = theta_max / (n_points - 1) as f64;
@@ -180,11 +183,13 @@ fn sample_theta(l: i32, m: i32) -> f64 {
         *v /= sum;
     }
 
+    return (cdf, dtheta);
+}
+
+fn sample_theta(cdf: &[f64], dtheta: f64) -> f64 {
     let u: f64 = rand::rng().random();
     let idx = cdf.partition_point(|&v| v < u);
-
     return idx as f64 * dtheta;
-
 }
 
 
@@ -193,11 +198,7 @@ fn sample_phi() -> f64 {
 }
 
 
-fn sample_position(n: i32, l: i32, m: i32) -> (f64, f64, f64) {
-    let r = sample_r(n, l);
-    let theta = sample_theta(l, m);
-    let phi = sample_phi();
-
+fn sample_position(r: f64, theta: f64, phi: f64) -> (f64, f64, f64) {
     let x = r * theta.sin() * phi.cos();
     let y = r * theta.sin() * phi.sin();
     let z = r * theta.cos();
@@ -206,10 +207,18 @@ fn sample_position(n: i32, l: i32, m: i32) -> (f64, f64, f64) {
 }
 
 
-fn generate_positions(n: i32, l: i32, m: i32, count: usize) -> Vec<f32> {
-      let mut positions = Vec::new();
-      for _ in 0..count {
-            let (x, y, z) = sample_position(n, l, m);
+fn generate_positions(n: i32, l: i32, m: i32, count: usize) -> (Vec<f32>, f32) {
+        let mut positions = Vec::new();
+        let (cdf_r, dr, r_max) = build_cdf_r(n, l);
+        let (cdf_theta, dtheta) = build_cdf_theta(l, m);
+    
+        for _ in 0..count {
+            let r     = sample_r(&cdf_r, dr);
+            let theta = sample_theta(&cdf_theta, dtheta);
+            let phi = sample_phi();
+
+            let (x, y, z) = sample_position(r, theta, phi);
+
             positions.push(x as f32);
             positions.push(y as f32);
             positions.push(z as f32);
@@ -217,8 +226,8 @@ fn generate_positions(n: i32, l: i32, m: i32, count: usize) -> Vec<f32> {
             positions.push(r as f32);
             positions.push(g as f32);
             positions.push(b as f32);
-      }
-      positions
+        } 
+        (positions, r_max as f32)
 }
 
 
@@ -227,8 +236,8 @@ fn update_orbital(
     n_electrons: usize,
     ssbo: u32,
     window: &mut glfw::Window,
-) -> Vec<f32> {
-    let mut positions = generate_positions(n, l, m, n_electrons);
+) -> (Vec<f32>, f32) {
+    let (positions, r_max) = generate_positions(n, l, m, n_electrons);
     unsafe {
         gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, ssbo);
         gl::BufferData(
@@ -240,14 +249,14 @@ fn update_orbital(
     }
     println!("n={} l={} m={}", n, l, m);
     window.set_title(&format!("Atoms | n={} l={} m={}", n, l, m));
-    positions
+    (positions, r_max)
 } 
 
 
 fn heatmap_fire(t: f32) -> (f32, f32, f32) {
     let stops: [(f32, f32, f32, f32); 6] = [
-        (0.0,  0.0, 0.0, 0.0),
-        (0.2,  0.1, 0.0, 0.2),
+        (0.0,  0.3, 0.0, 0.5),
+        (0.2,  1.0, 0.0, 0.2),
         (0.4,  0.6, 0.0, 0.0),
         (0.6,  0.9, 0.4, 0.0),
         (0.8,  1.0, 0.9, 0.0),
@@ -323,11 +332,11 @@ fn main() {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE);
     }
 
-    let n_electrons = 5_000;
+    let n_electrons = 100_000;
     let mut orb_n: i32 = 2;
     let mut orb_l: i32 = 1;
     let mut orb_m: i32 = 0;
-    let mut positions = generate_positions(orb_n, orb_l, orb_m, n_electrons);
+    let (mut positions, mut r_max) = generate_positions(orb_n, orb_l, orb_m, n_electrons);
 
     window.set_title(&format!("Atoms | n={} l={} m={}", orb_n, orb_l, orb_m));
 
@@ -430,6 +439,11 @@ fn main() {
         gl::GetUniformLocation(shader_program, name.as_ptr())
     };
 
+    let bound_radius_location = unsafe {
+        let name = std::ffi::CString::new("bound_radius").unwrap();
+        gl::GetUniformLocation(shader_program, name.as_ptr())
+    };
+
     let mut azimuth: f32 = 0.0;    // angle horizontal en radians
     let mut elevation: f32 = 0.3;  // angle vertical en radians (légèrement au-dessus)
     let mut radius: f32 = 15.0;     // distance de la caméra (ex: 15.0)
@@ -448,33 +462,33 @@ fn main() {
                     orb_n += 1;
                     orb_l = orb_l.min(orb_n - 1);
                     orb_m = orb_m.clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
+                    (positions, r_max) = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
 
                 }
                 glfw::WindowEvent::Key(Key::Down, _, Action::Press, _) => {
                     orb_n = (orb_n - 1).max(1);
                     orb_l = orb_l.min(orb_n - 1);
                     orb_m = orb_m.clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
+                    (positions, r_max) = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
 
                 }
                 glfw::WindowEvent::Key(Key::Left, _, Action::Press, _) => {
                     orb_l = (orb_l - 1).max(0);
                     orb_m = orb_m.clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
+                    (positions, r_max) = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
                 }
                 glfw::WindowEvent::Key(Key::Right, _, Action::Press, _) => {
                     orb_l = (orb_l + 1).max(0);
                     orb_m = orb_m.clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
+                    (positions, r_max) = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
                 }
                 glfw::WindowEvent::Key(Key::A, _, Action::Press, _) => {
                     orb_m = (orb_m - 1).clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
+                    (positions, r_max) = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
                 }
                 glfw::WindowEvent::Key(Key::E, _, Action::Press, _) => {
                     orb_m = (orb_m + 1).clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
+                    (positions, r_max) = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
                 }
 
                 glfw::WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Press, _) => {
@@ -509,6 +523,7 @@ fn main() {
             gl::Uniform3f(cam_pos_location, cam_x, cam_y, cam_z);
             gl::Uniform1i(n_sphere_location, n_electrons as i32);
             gl::Uniform2f(resolution_location, 800.0, 600.0);
+            gl::Uniform1f(bound_radius_location, r_max);
             gl::BindVertexArray(quad_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 6);
         }
