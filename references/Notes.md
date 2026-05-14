@@ -251,3 +251,37 @@ unsafe {
   gl::Enable(gl::DEPTH_TEST);
   gl::Enable(gl::PROGRAM_POINT_SIZE);
 }
+
+Improve Visuels : 
+1. Rust : fn inferno(x, y, z, n, l, m) -> (f32, f32, f32)
+2. generate_positions → stocke 6 floats par point (x,y,z,r,g,b)
+3. VAO → 2 attributs : position (loc 0) + couleur (loc 1)
+4. Shaders → vertex passe la couleur, fragment l'utilise
+
+1. C'est le port direct du C++ inferno(). Elle calcule la densité de probabilité en (x,y,z), la compresse en log, puis la mappe sur la palette feu.
+
+  Voici la palette feu (6 stops, comme dans le C++) :
+
+  0.0  → (0, 0, 0)       noir
+  0.2  → (0.1, 0, 0.2)   violet foncé
+  0.4  → (0.6, 0, 0)     rouge
+  0.6  → (0.9, 0.4, 0)   orange
+  0.8  → (1.0, 0.9, 0)   jaune
+  1.0  → (1, 1, 1)       blanc
+
+  Écris d'abord la fonction heatmap_fire qui prend un f32 entre 0 et 1 et retourne (f32, f32, f32).
+
+
+2. fn inferno
+
+  Cette fonction prend une position (x, y, z) et les nombres quantiques (n, l, m), calcule la densité de probabilité en
+  ce point, la compresse en log, et retourne une couleur RGB via heatmap_fire.
+
+3. Modifier generate_positions
+
+Actuellement elle stocke 3 floats par point (x, y, z). Elle doit en stocker 6 (x, y, z, r, g, b). La signature ne change pas, mais le corps oui.
+
+
+4. VAO et SHADERS
+
+Le VAO lit actuellement 3 floats par vertex. Il faut lui dire que chaque vertex est maintenant 6 floats : (x, y, z, r, g, b)

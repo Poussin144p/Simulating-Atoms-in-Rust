@@ -9,6 +9,7 @@ struct Particle {
     n: i32, l: i32, m: i32
 }
 
+
 impl Particle {
     // new() c'est sans instance, display() c'est sur une instance existante
 
@@ -50,9 +51,11 @@ impl Particle {
     }
 }
 
+
 struct Engine {
     particles: Vec<Particle>
 }
+
 
 impl Engine {
 
@@ -66,6 +69,7 @@ impl Engine {
     }
 
 }
+
 
 fn laguerre(k: i32, alpha: i32, rho: f64) -> f64 {
     if k == 0 { return 1.0; }
@@ -85,6 +89,7 @@ fn laguerre(k: i32, alpha: i32, rho: f64) -> f64 {
     return l;
 
 }
+
 
 fn legendre(l: i32, m: i32, x: f64) -> f64 {
     let mut pmm: f64 = 1.0;
@@ -204,25 +209,30 @@ fn sample_position(n: i32, l: i32, m: i32) -> (f64, f64, f64) {
 fn generate_positions(n: i32, l: i32, m: i32, count: usize) -> Vec<f32> {
       let mut positions = Vec::new();
       for _ in 0..count {
-          let (x, y, z) = sample_position(n, l, m);
-          positions.push(x as f32);
-          positions.push(y as f32);
-          positions.push(z as f32);
+            let (x, y, z) = sample_position(n, l, m);
+            positions.push(x as f32);
+            positions.push(y as f32);
+            positions.push(z as f32);
+            let (r, g, b) = inferno(x, y, z, n, l, m);
+            positions.push(r as f32);
+            positions.push(g as f32);
+            positions.push(b as f32);
       }
       positions
 }
 
+
 fn update_orbital(
     n: i32, l: i32, m: i32,
     n_electrons: usize,
-    vbo: u32,
+    ssbo: u32,
     window: &mut glfw::Window,
 ) -> Vec<f32> {
     let mut positions = generate_positions(n, l, m, n_electrons);
     unsafe {
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, ssbo);
         gl::BufferData(
-            gl::ARRAY_BUFFER,
+            gl::SHADER_STORAGE_BUFFER,
             (positions.len() * std::mem::size_of::<f32>()) as isize,
             positions.as_ptr() as *const _,
             gl::DYNAMIC_DRAW,
@@ -233,74 +243,61 @@ fn update_orbital(
     positions
 } 
 
+
+fn heatmap_fire(t: f32) -> (f32, f32, f32) {
+    let stops: [(f32, f32, f32, f32); 6] = [
+        (0.0,  0.0, 0.0, 0.0),
+        (0.2,  0.1, 0.0, 0.2),
+        (0.4,  0.6, 0.0, 0.0),
+        (0.6,  0.9, 0.4, 0.0),
+        (0.8,  1.0, 0.9, 0.0),
+        (1.0,  1.0, 1.0, 1.0),
+    ];
+
+    for i in 0..stops.len() - 1 {
+        let (t0, r0, g0, b0) = stops[i];
+        let (t1, r1, g1, b1) = stops[i+1];
+
+        if t >= t0 && t <= t1 {
+            let s = (t - t0) / (t1 - t0);
+            return (r0 + s * (r1 - r0), g0 + s * (g1 - g0), b0 + s * (b1 - b0));
+        }
+    }
+    (1.0, 1.0, 1.0)
+
+}
+
+
+fn inferno(x: f64, y: f64, z: f64, n: i32, l: i32, m: i32) -> (f32, f32, f32) {
+    let a0 = 0.529_f64;
+    let r = f64::sqrt(x*x + y*y + z*z).max(1e-10);
+    let rho = 2.0 * r / (n as f64 * a0);
+
+    let l_val = laguerre(n - l - 1, 2 * l + 1, rho);
+    let big_r = f64::exp(-rho / 2.0) * rho.powi(l) * l_val;
+
+    let cos_theta = z / r;
+    let y_val = legendre(l, m.abs(), cos_theta);
+
+    let prob = big_r * big_r * y_val * y_val;
+
+    let intensity = (prob * 700.0 + 1.0).ln() / (701.0_f64).ln();
+    heatmap_fire(intensity as f32)
+}
+
+
 fn main() {
 
-    // // 1. Créer un Engine
-    // let mut engine = Engine::new() ;
+    // Shaders ray tracing
+    let vertex_src = include_str!("shaders\\vertex.glsl");
 
-    // // 2. Créer quelques particules avec Particle::new()
-    // let mut particle_1 = Particle::new(0.0, 0.0, 0.0, 1, 1, 0, 0);
-    // let mut particle_2 = Particle::new(1.0, 1.0, 1.0, 2, 3, 2, 2);
-    // let mut particle_3 = Particle::new(2.0, 2.0, 2.0, 3, 2, 1, 1); 
-
-    // // Calculer les probas
-    // particle_1.compute_probability();
-    // particle_2.compute_probability();
-    // particle_3.compute_probability();
-
-    // // test theta/phi
-    // let particle = Particle::new(1.0, 0.0, 0.0, 1, 0, 1, 1);
-    // println!("theta={}, phi={}", particle.theta(), particle.phi());
-    
-    // // 3. Ajouter avec add_particle()
-    // engine.add_particle(particle_1);
-    // engine.add_particle(particle_2);
-    // engine.add_particle(particle_3);
-
-    // // 4. Afficher chaque particule
-    // for p in &engine.particles {
-    //     p.display();
-    // }
-
-    // println!("{}", laguerre(0, 0, 0.0));
-    // println!("{}", legendre(1, 0, 1.0));  // attendu : 1.0
-
-    // println!("r samples pour n=1, l=0 :");
-    // for _ in 0..5 {
-    //     println!(" r = {:.3}, theta = {:.3}", sample_r(1, 0), sample_theta(1, 0));
-    // }
-    // for _ in 0..5 {
-    //     let (x, y, z) = sample_position(2, 1, 0);
-    //     println!("x={:.3}, y={:.3}, z={:.3}", x, y, z);
-    // }
-
-    // Shader placement des points et colorisation
-    let vertex_src = r#"
-        #version 330 core
-        layout(location = 0) in vec3 pos;
-        uniform mat4 mvp;
-        void main() {
-            gl_Position = mvp * vec4(pos, 1.0);
-            float depth = gl_Position.w / 8;
-            gl_PointSize = clamp(6.0 / depth, 1.0, 5.0);
-        }
-    "#;
-
-    let fragment_src = r#"
-        #version 330 core
-        out vec4 color;
-        void main() {
-            vec2 center = gl_PointCoord - vec2(0.5);
-            if (length(center) > 0.5) discard;
-            color = vec4(0.3, 0.7, 1.0, 1.0);
-        }
-    "#;
+    let fragment_src = include_str!("shaders\\fragment.glsl");
 
 
     // Init GLFW
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
-    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
+    glfw.window_hint(glfw::WindowHint::ContextVersion(4, 3));
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
 
     // Créer la fenêtre
@@ -310,6 +307,10 @@ fn main() {
 
     window.make_current();
     window.set_key_polling(true);
+    window.set_mouse_button_polling(true);
+    window.set_cursor_pos_polling(true);
+    window.set_scroll_polling(true);
+    
     gl::load_with(|s| match window.get_proc_address(s) {
         Some(f) => f as *const _,
         None => std::ptr::null(),
@@ -318,6 +319,8 @@ fn main() {
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
         gl::Enable(gl::PROGRAM_POINT_SIZE);
+        gl::Enable(gl::BLEND);
+        gl::BlendFunc(gl::SRC_ALPHA, gl::ONE);
     }
 
     let n_electrons = 5_000;
@@ -342,16 +345,51 @@ fn main() {
     }
 
 
-    // Créer le Vertex Array Object qui mémorise comment lire les données du VBO (3 floats : x, y, z)
+    // Créer le VAO (Vertex Array Object) qui mémorise comment lire les données du VBO (3 floats : x, y, z)
     let mut vao: u32 = 0;
     unsafe {
         gl::GenVertexArrays(1, &mut vao);
         gl::BindVertexArray(vao);
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+        let stride = (6 * std::mem::size_of::<f32>()) as i32;
+        gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, stride, std::ptr::null());          // position
+        gl::EnableVertexAttribArray(0);
+        gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE, stride, (3 * std::mem::size_of::<f32>()) as *const _);  // couleur
+        gl::EnableVertexAttribArray(1);
+    }
+
+
+    // Fullscreen quad
+    let quad_verts: [f32; 12] = [
+        -1.0, -1.0,  1.0, -1.0,  1.0,  1.0,
+        -1.0, -1.0,  1.0,  1.0, -1.0,  1.0,
+    ];
+    let mut quad_vao: u32 = 0;
+    let mut quad_vbo: u32 = 0;
+    unsafe {
+        gl::GenVertexArrays(1, &mut quad_vao);
+        gl::GenBuffers(1, &mut quad_vbo);
+        gl::BindVertexArray(quad_vao);
+        gl::BindBuffer(gl::ARRAY_BUFFER, quad_vbo);
+        gl::BufferData(gl::ARRAY_BUFFER,
+            (quad_verts.len() * std::mem::size_of::<f32>()) as isize,
+            quad_verts.as_ptr() as *const _,
+            gl::STATIC_DRAW);
+        gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
         gl::EnableVertexAttribArray(0);
     }
 
+    // SSBO — positions et couleurs des sphères (6 floats par sphère : x,y,z,r,g,b)
+    let mut ssbo: u32 = 0;
+    unsafe {
+        gl::GenBuffers(1, &mut ssbo);
+        gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, ssbo);
+        gl::BufferData(gl::SHADER_STORAGE_BUFFER,
+            (positions.len() * std::mem::size_of::<f32>()) as isize,
+            positions.as_ptr() as *const _,
+            gl::DYNAMIC_DRAW);
+        gl::BindBufferBase(gl::SHADER_STORAGE_BUFFER, 0, ssbo);
+    }
 
     // Compiler et lier les shaders
     let shader_program = unsafe {
@@ -377,12 +415,26 @@ fn main() {
 
 
     // MVP
-    let mvp_location = unsafe {
-        let name = std::ffi::CString::new("mvp").unwrap();
+    let cam_pos_location = unsafe {
+        let name = std::ffi::CString::new("cam_pos").unwrap();
         gl::GetUniformLocation(shader_program, name.as_ptr())
     };
 
-    let mut angle: f32 = 0.0;
+    let n_sphere_location = unsafe {
+        let name = std::ffi::CString::new("n_spheres").unwrap();
+        gl::GetUniformLocation(shader_program, name.as_ptr())
+    };
+
+    let resolution_location = unsafe {
+        let name = std::ffi::CString::new("resolution").unwrap();
+        gl::GetUniformLocation(shader_program, name.as_ptr())
+    };
+
+    let mut azimuth: f32 = 0.0;    // angle horizontal en radians
+    let mut elevation: f32 = 0.3;  // angle vertical en radians (légèrement au-dessus)
+    let mut radius: f32 = 15.0;     // distance de la caméra (ex: 15.0)
+    let mut is_dragging = false;
+    let mut last_mouse: (f64, f64) = (0.0, 0.0);
 
     // Boucle de rendu
     while !window.should_close() {
@@ -396,35 +448,53 @@ fn main() {
                     orb_n += 1;
                     orb_l = orb_l.min(orb_n - 1);
                     orb_m = orb_m.clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, vbo, &mut window);
+                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
 
                 }
                 glfw::WindowEvent::Key(Key::Down, _, Action::Press, _) => {
                     orb_n = (orb_n - 1).max(1);
                     orb_l = orb_l.min(orb_n - 1);
                     orb_m = orb_m.clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, vbo, &mut window);
+                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
 
                 }
                 glfw::WindowEvent::Key(Key::Left, _, Action::Press, _) => {
                     orb_l = (orb_l - 1).max(0);
                     orb_m = orb_m.clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, vbo, &mut window);
+                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
                 }
                 glfw::WindowEvent::Key(Key::Right, _, Action::Press, _) => {
                     orb_l = (orb_l + 1).max(0);
                     orb_m = orb_m.clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, vbo, &mut window);
+                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
                 }
                 glfw::WindowEvent::Key(Key::A, _, Action::Press, _) => {
                     orb_m = (orb_m - 1).clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, vbo, &mut window);
+                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
                 }
                 glfw::WindowEvent::Key(Key::E, _, Action::Press, _) => {
                     orb_m = (orb_m + 1).clamp(-orb_l, orb_l);
-                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, vbo, &mut window);
+                    positions = update_orbital(orb_n, orb_l, orb_m, n_electrons, ssbo, &mut window);
                 }
 
+                glfw::WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Press, _) => {
+                    is_dragging = true;
+                }
+                glfw::WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Release, _) => {
+                    is_dragging = false;
+                }
+                glfw::WindowEvent::CursorPos(x, y) => {
+                    if is_dragging {
+                        let dx = (x - last_mouse.0) as f32;
+                        let dy = (y - last_mouse.1) as f32;
+                        azimuth -= dx * 0.005;
+                        elevation = (elevation + dy * 0.005).clamp(-1.5, 1.5);
+                    }
+                    last_mouse = (x, y);
+                }
+                glfw::WindowEvent::Scroll(_, dy) => {
+                    radius = (radius - dy as f32).max(1.0);
+                }
                 _ => {}
             }
         }
@@ -433,23 +503,14 @@ fn main() {
             gl::ClearColor(0.0, 0.0, 0.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::UseProgram(shader_program);
-            gl::BindVertexArray(vao);
-            angle += 0.0003;
-
-            let projection = glm::perspective(800.0_f32 / 600.0, 45.0_f32.to_radians(), 0.1, 100.0);
-            let view = glm::look_at(
-                &glm::vec3(0.0, 0.0, 15.0),
-                &glm::vec3(0.0, 0.0, 0.0),
-                &glm::vec3(0.0, 1.0, 0.0),
-            );
-            let model = glm::rotation(angle, &glm::vec3(0.0, 1.0, 1.0));
-            let mvp = projection * view * model;
-
-            unsafe {
-                gl::UniformMatrix4fv(mvp_location, 1, gl::FALSE, glm::value_ptr(&mvp).as_ptr());    
-            }
-            gl::DrawArrays(gl::POINTS, 0, n_electrons as i32);
-            
+            let cam_x = radius * elevation.cos() * azimuth.sin();
+            let cam_y = radius * elevation.sin();
+            let cam_z = radius * elevation.cos() * azimuth.cos();
+            gl::Uniform3f(cam_pos_location, cam_x, cam_y, cam_z);
+            gl::Uniform1i(n_sphere_location, n_electrons as i32);
+            gl::Uniform2f(resolution_location, 800.0, 600.0);
+            gl::BindVertexArray(quad_vao);
+            gl::DrawArrays(gl::TRIANGLES, 0, 6);
         }
 
         window.swap_buffers();

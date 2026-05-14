@@ -34,8 +34,8 @@ user_profile:
     - Maths quantiques (Laguerre, Legendre, Schrödinger)
 
 progress:
-  current_day: 11
-  next_topic: "Couleur selon la profondeur, effet de glow, rapprocher le rendu du projet de référence"
+  current_day: 14
+  next_topic: "Ray tracing partie 2 — ray-sphere intersection, éclairage diffus, uniforms cam_pos/n_spheres/resolution"
   completed_days:
     - day: 1
       date: "2026-05-13"
@@ -67,6 +67,15 @@ progress:
     - day: 10
       date: "2026-05-14"
       topic: "Rendu avancé — depth buffer, PROGRAM_POINT_SIZE, taille dynamique des points, points circulaires via gl_PointCoord"
+    - day: 11
+      date: "2026-05-14"
+      topic: "Colormap inferno — heatmap_fire (interpolation palette feu), inferno (densité de probabilité + compression log), VBO 6 floats (x,y,z,r,g,b), VAO stride + 2 attributs, varying vertex→fragment"
+    - day: 12
+      date: "2026-05-14"
+      topic: "Caméra orbitale — azimut/élévation/radius, events souris (MouseButton, CursorPos, Scroll), position caméra en coordonnées sphériques, uniform radius pour taille adaptative des points"
+    - day: 13
+      date: "2026-05-14"
+      topic: "Ray tracing setup — upgrade OpenGL 4.3, fullscreen quad (VAO/VBO 2D), SSBO pour les sphères (6 floats par particule), shaders placeholder"
 
 mastery:
   ownership:
