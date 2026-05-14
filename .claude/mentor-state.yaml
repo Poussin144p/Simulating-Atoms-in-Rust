@@ -34,8 +34,8 @@ user_profile:
     - Maths quantiques (Laguerre, Legendre, Schrödinger)
 
 progress:
-  current_day: 8
-  next_topic: "Changer l et m au clavier, afficher l'état courant dans le titre de la fenêtre"
+  current_day: 9
+  next_topic: "Refactoring — extraire une fonction update_vbo, nettoyer le code dupliqué dans les handlers"
   completed_days:
     - day: 1
       date: "2026-05-13"
@@ -58,6 +58,9 @@ progress:
     - day: 7
       date: "2026-05-14"
       topic: "Changement d'orbitale au clavier (flèches haut/bas), régénération dynamique du VBO, optimisation n_points/n_electrons"
+    - day: 8
+      date: "2026-05-14"
+      topic: "Changement de l et m au clavier, titre de fenêtre dynamique, gestion AZERTY/QWERTY"
 
 mastery:
   ownership:
