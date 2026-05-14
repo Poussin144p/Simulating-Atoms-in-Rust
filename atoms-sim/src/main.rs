@@ -1,3 +1,5 @@
+use rand::RngExt;
+
 struct Particle {
     x: f32, y: f32, z: f32,
     charge: i32,
@@ -116,6 +118,86 @@ fn legendre(l: i32, m: i32, x: f64) -> f64 {
     return plm;
 }
 
+
+fn sample_r(n: i32, l: i32) -> f64 {
+    let a0 = 0.529_f64;
+    let n_points = 4096;
+    let r_max = 10.0 * (n * n) as f64 * a0;
+    let dr = r_max / (n_points - 1) as f64;
+
+    // 1. Construire le PDF puis la CDF
+    let mut cdf = vec![0.0_f64; n_points];
+    let mut sum = 0.0_f64;
+
+    for i in 0..n_points {
+        let r = i as f64 * dr;
+        let rho = 2.0 * r / (n as f64 * a0);
+        let l_val = laguerre(n - l - 1, 2 * l + 1, rho);
+        let big_r = f64::exp(-rho / 2.0) * rho.powi(l) * l_val;
+        let pdf = r * r * big_r * big_r; // r² pondère la densité sphérique
+        sum += pdf;
+        cdf[i] = sum;
+    }
+
+    // 2. Normaliser la CDF entre 0 et 1
+    for v in &mut cdf {
+        *v /= sum;
+    }
+
+    // 3. Tirer u aléatoire et trouver le r correspondant.
+    let u: f64 = rand::rng().random();
+    let idx = cdf.partition_point(|&v| v < u);
+
+    idx as f64 * dr
+}
+
+
+fn sample_theta(l: i32, m: i32) -> f64 {
+    let n_points = 4096;
+    let theta_max = std::f64::consts::PI;
+    let dtheta = theta_max / (n_points - 1) as f64;
+
+    let mut cdf = vec![0.0_f64; n_points];
+    let mut sum = 0.0_f64;
+
+    for i in 0..n_points {
+        let theta = i as f64 * dtheta;
+        let plm = legendre(l, m.abs(), theta.cos());
+        let pdf = theta.sin() * plm * plm;
+        
+        sum += pdf;
+        cdf[i] = sum;
+    }
+
+    for v in &mut cdf {
+        *v /= sum;
+    }
+
+    let u: f64 = rand::rng().random();
+    let idx = cdf.partition_point(|&v| v < u);
+
+    return idx as f64 * dtheta;
+
+}
+
+
+fn sample_phi() -> f64 {
+    rand::rng().random::<f64>() * 2.0 * std::f64::consts::PI
+}
+
+
+fn sample_position(n: i32, l: i32, m: i32) -> (f64, f64, f64) {
+    let r = sample_r(n, l);
+    let theta = sample_theta(l, m);
+    let phi = sample_phi();
+
+    let x = r * theta.sin() * phi.cos();
+    let y = r * theta.sin() * phi.sin();
+    let z = r * theta.cos();
+
+    return (x, y, z);
+}
+
 fn main() {
 
     // 1. Créer un Engine
@@ -147,4 +229,13 @@ fn main() {
 
     println!("{}", laguerre(0, 0, 0.0));
     println!("{}", legendre(1, 0, 1.0));  // attendu : 1.0
+
+    println!("r samples pour n=1, l=0 :");
+    for _ in 0..5 {
+        println!(" r = {:.3}, theta = {:.3}", sample_r(1, 0), sample_theta(1, 0));
+    }
+    for _ in 0..5 {
+        let (x, y, z) = sample_position(2, 1, 0);
+        println!("x={:.3}, y={:.3}, z={:.3}", x, y, z);
+    }
 }

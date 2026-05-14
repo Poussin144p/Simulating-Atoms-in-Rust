@@ -34,8 +34,8 @@ user_profile:
     - Maths quantiques (Laguerre, Legendre, Schrödinger)
 
 progress:
-  current_day: 3
-  next_topic: "Coordonnées sphériques (r, θ, φ), nombres quantiques n/l/m, fonction d'onde générale"
+  current_day: 4
+  next_topic: "Normalisation, échantillonnage Monte Carlo, CDF pour r et theta"
   completed_days:
     - day: 1
       date: "2026-05-13"
@@ -43,6 +43,9 @@ progress:
     - day: 2
       date: "2026-05-13"
       topic: "impl blocks, &self vs &mut self, Vec::push, boucle for, densité de probabilité hydrogène"
+    - day: 3
+      date: "2026-05-14"
+      topic: "Coordonnées sphériques, polynômes de Laguerre et Legendre, compute_probability générale (n, l, m)"
 
 mastery:
   ownership:
@@ -69,6 +72,18 @@ mastery:
     status: practicing
     correct_count: 2
     last_seen: "2026-05-13"
+  spherical_coordinates:
+    status: validated
+    correct_count: 3
+    last_seen: "2026-05-14"
+  laguerre_legendre:
+    status: practicing
+    correct_count: 2
+    last_seen: "2026-05-14"
+  quantum_numbers:
+    status: practicing
+    correct_count: 2
+    last_seen: "2026-05-14"
 
 evaluations: []
 

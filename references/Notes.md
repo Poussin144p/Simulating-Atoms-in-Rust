@@ -106,3 +106,31 @@ fn compute_probability(&mut self) {
 
         self.probability = (big_r * big_r * y_val * y_val) as f32;
     }
+
+
+
+Actuellement compute_probability() calcule la probabilité à une position donnée. Pour simuler un électron, on veut
+  l'inverse : générer une position aléatoire qui respecte la distribution de probabilité.
+
+  Le problème : on ne peut pas tirer au hasard uniformément — l'électron est plus souvent près du noyau que loin. Il
+  faut un tirage biaisé selon la densité de probabilité.
+
+  La solution : Monte Carlo avec CDF.
+
+
+
+1. On découpe r en N intervalles (0 à r_max)
+2. On calcule P(r) pour chaque intervalle → c'est le PDF
+3. On cumule ces valeurs → c'est la CDF (elle va de 0 à 1)
+4. On tire un nombre aléatoire u entre 0 et 1
+5. On cherche le r où CDF(r) = u → c'est notre position
+
+C'est exactement ce que fait sampleR dans le C++. Le rejection sampling peut rejeter 99% des tirages pour des orbitales diffuses. La CDF garantit un tirage
+utile à chaque fois.
+
+
+1. Pourquoi multiplie-t-on par r² dans le PDF ?
+- Le facteur r² vient du volume d'une coquille sphérique : dV = 4πr² dr. Plus on est loin du centre, plus il y a de "place" dans l'espace. Sans ce facteur on       sous-estimerait les grandes distances.
+2. Pour l'étape 3, comment trouver l'indice où CDF[i] >= u selon toi ?
+- En pratique on utilise une recherche binaire plutôt qu'un filter linéaire — la CDF est triée, donc on peut trouver l'indice en O(log N) au lieu de O(N). En Rust :
+let idx = cdf.partition_point(|&v| v < u);
