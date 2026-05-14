@@ -34,8 +34,8 @@ user_profile:
     - Maths quantiques (Laguerre, Legendre, Schrödinger)
 
 progress:
-  current_day: 10
-  next_topic: "Rendu avancé — depth buffer, taille des points selon la distance, première approche du ray tracing"
+  current_day: 11
+  next_topic: "Couleur selon la profondeur, effet de glow, rapprocher le rendu du projet de référence"
   completed_days:
     - day: 1
       date: "2026-05-13"
@@ -64,6 +64,9 @@ progress:
     - day: 9
       date: "2026-05-14"
       topic: "Refactoring — extraction de update_orbital, élimination du code dupliqué dans les handlers"
+    - day: 10
+      date: "2026-05-14"
+      topic: "Rendu avancé — depth buffer, PROGRAM_POINT_SIZE, taille dynamique des points, points circulaires via gl_PointCoord"
 
 mastery:
   ownership:

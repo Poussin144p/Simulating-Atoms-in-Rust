@@ -281,7 +281,8 @@ fn main() {
         uniform mat4 mvp;
         void main() {
             gl_Position = mvp * vec4(pos, 1.0);
-            gl_PointSize = 50.0 / gl_Position.w;
+            float depth = gl_Position.w / 8;
+            gl_PointSize = clamp(6.0 / depth, 1.0, 5.0);
         }
     "#;
 
