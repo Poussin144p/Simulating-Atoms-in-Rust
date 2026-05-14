@@ -1,5 +1,6 @@
 use rand::RngExt;
 use glfw::{Action, Context, Key};
+use nalgebra_glm as glm;
 
 struct Particle {
     x: f32, y: f32, z: f32,
@@ -244,8 +245,9 @@ fn main() {
     let vertex_src = r#"
         #version 330 core
         layout(location = 0) in vec3 pos;
+        uniform mat4 mvp;
         void main() {
-            gl_Position = vec4(pos * 0.1, 1.0);
+            gl_Position = mvp * vec4(pos, 1.0);
         }
     "#;
 
@@ -334,6 +336,15 @@ fn main() {
         program
     };
 
+
+    // MVP
+    let mvp_location = unsafe {
+        let name = std::ffi::CString::new("mvp").unwrap();
+        gl::GetUniformLocation(shader_program, name.as_ptr())
+    };
+
+    let mut angle: f32 = 0.0;
+
     // Boucle de rendu
     while !window.should_close() {
         glfw.poll_events();
@@ -349,7 +360,22 @@ fn main() {
             gl::UseProgram(shader_program);
             gl::BindVertexArray(vao);
             gl::PointSize(2.0);
+            angle += 0.0003;
+
+            let projection = glm::perspective(800.0_f32 / 600.0, 45.0_f32.to_radians(), 0.1, 100.0);
+            let view = glm::look_at(
+                &glm::vec3(0.0, 0.0, 15.0),
+                &glm::vec3(0.0, 0.0, 0.0),
+                &glm::vec3(0.0, 1.0, 0.0),
+            );
+            let model = glm::rotation(angle, &glm::vec3(0.0, 1.0, 1.0));
+            let mvp = projection * view * model;
+
+            unsafe {
+                gl::UniformMatrix4fv(mvp_location, 1, gl::FALSE, glm::value_ptr(&mvp).as_ptr());    
+            }
             gl::DrawArrays(gl::POINTS, 0, n_electrons as i32);
+            
         }
 
         window.swap_buffers();
