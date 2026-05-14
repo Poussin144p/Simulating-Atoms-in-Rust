@@ -297,6 +297,9 @@ fn main() {
     let mut orb_m: i32 = 0;
     let mut positions = generate_positions(orb_n, orb_l, orb_m, n_electrons);
 
+    window.set_title(&format!("Atoms | n={} l={} m={}", orb_n, orb_l, orb_m));
+
+
     //Créer le VBO et envoyer les données au GPU
     let mut vbo: u32 = 0;
     unsafe {
@@ -375,6 +378,8 @@ fn main() {
                         );
                     }
                     println!("n={} l={} m={}", orb_n, orb_l, orb_m);
+                    window.set_title(&format!("Atoms | n={} l={} m={}", orb_n, orb_l, orb_m));
+
                 }
                 glfw::WindowEvent::Key(Key::Down, _, Action::Press, _) => {
                     orb_n = (orb_n - 1).max(1);
@@ -391,7 +396,72 @@ fn main() {
                         );
                     }
                     println!("n={} l={} m={}", orb_n, orb_l, orb_m);
+                    window.set_title(&format!("Atoms | n={} l={} m={}", orb_n, orb_l, orb_m));
+
                 }
+                glfw::WindowEvent::Key(Key::Left, _, Action::Press, _) => {
+                    orb_l = (orb_l - 1).max(0);
+                    orb_m = orb_m.clamp(-orb_l, orb_l);
+                    positions = generate_positions(orb_n, orb_l, orb_m, n_electrons);
+                    unsafe {
+                        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+                        gl::BufferData(
+                            gl::ARRAY_BUFFER,
+                            (positions.len() * std::mem::size_of::<f32>()) as isize,
+                            positions.as_ptr() as *const _,
+                            gl::DYNAMIC_DRAW,
+                        );
+                    }
+                    println!("n={} l={} m={}", orb_n, orb_l, orb_m);
+                    window.set_title(&format!("Atoms | n={} l={} m={}", orb_n, orb_l, orb_m));
+                }
+                glfw::WindowEvent::Key(Key::Right, _, Action::Press, _) => {
+                    orb_l = (orb_l + 1).max(0);
+                    orb_m = orb_m.clamp(-orb_l, orb_l);
+                    positions = generate_positions(orb_n, orb_l, orb_m, n_electrons);
+                    unsafe {
+                        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+                        gl::BufferData(
+                            gl::ARRAY_BUFFER,
+                            (positions.len() * std::mem::size_of::<f32>()) as isize,
+                            positions.as_ptr() as *const _,
+                            gl::DYNAMIC_DRAW,
+                        );
+                    }
+                    println!("n={} l={} m={}", orb_n, orb_l, orb_m);
+                    window.set_title(&format!("Atoms | n={} l={} m={}", orb_n, orb_l, orb_m));
+                }
+                glfw::WindowEvent::Key(Key::A, _, Action::Press, _) => {
+                    orb_m = (orb_m - 1).clamp(-orb_l, orb_l);
+                    positions = generate_positions(orb_n, orb_l, orb_m, n_electrons);
+                    unsafe {
+                        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+                        gl::BufferData(
+                            gl::ARRAY_BUFFER,
+                            (positions.len() * std::mem::size_of::<f32>()) as isize,
+                            positions.as_ptr() as *const _,
+                            gl::DYNAMIC_DRAW,
+                        );
+                    }
+                    println!("n={} l={} m={}", orb_n, orb_l, orb_m);
+                    window.set_title(&format!("Atoms | n={} l={} m={}", orb_n, orb_l, orb_m));
+                }
+                glfw::WindowEvent::Key(Key::E, _, Action::Press, _) => {
+                    orb_m = (orb_m + 1).clamp(-orb_l, orb_l);
+                    positions = generate_positions(orb_n, orb_l, orb_m, n_electrons);
+                    unsafe {
+                        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+                        gl::BufferData(
+                            gl::ARRAY_BUFFER,
+                            (positions.len() * std::mem::size_of::<f32>()) as isize,
+                            positions.as_ptr() as *const _,
+                            gl::DYNAMIC_DRAW,
+                        );
+                    }
+                    println!("n={} l={} m={}", orb_n, orb_l, orb_m);
+                    window.set_title(&format!("Atoms | n={} l={} m={}", orb_n, orb_l, orb_m));
+                }
+
                 _ => {}
             }
         }

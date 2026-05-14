@@ -10,7 +10,7 @@ objective:
   reference_video_script: "references/Simulating Atoms in C++.txt"
 
 pedagogy:
-  mode: active
+  mode: available
 
 stack:
   detected:
@@ -55,6 +55,9 @@ progress:
     - day: 6
       date: "2026-05-14"
       topic: "Caméra 3D, matrice MVP, rotation automatique avec nalgebra-glm"
+    - day: 7
+      date: "2026-05-14"
+      topic: "Changement d'orbitale au clavier (flèches haut/bas), régénération dynamique du VBO, optimisation n_points/n_electrons"
 
 mastery:
   ownership:
