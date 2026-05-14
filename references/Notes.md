@@ -85,6 +85,9 @@ comprendre ce qu'on calcule avant de continuer.
 
   P(r, θ) = [Laguerre → à quelle distance]² × [Legendre → dans quelle direction]²
 
+  la densité de probabilité à une position (r, θ). Pas un emplacement fixe, mais la probabilité de
+  trouver l'électron à cet endroit. P(r, θ) = R(r)² × Y(θ, φ)²
+
   C'est ça que tu calcules dans compute_probability().
 
 En RUST :
@@ -169,3 +172,63 @@ Maintenant on va afficher les points de l'électron. Le principe OpenGL pour des
 le GPU est conçu pour traiter des milliers de points en parallèle. Si on dessinait depuis le CPU, on
 enverrait les données point par point à chaque frame. Avec un VBO, on envoie tout en une fois au début, et le GPU
 dessine directement depuis sa mémoire à chaque frame.
+
+Actuellement les points sont projetés à plat — pas de perspective, pas de rotation. Pour donner une vraie vue 3D il
+faut une matrice de transformation qui convertit les coordonnées 3D en coordonnées écran.
+
+Le pipeline classique :
+position 3D → Model → View → Projection → écran
+
+On va utiliser la crate glm pour les maths matricielles
+
+
+Reprise du J3 au J7 :
+
+Tu as converti des coordonnées cartésiennes (x, y, z) en coordonnées sphériques (r, θ, φ). Donne-moi les trois formules de conversion.
+
+r_orig = f32::sqrt(self.x.powi(2) + self.y.powi(2) + self.z.powi(2)) = √(x² + y² + z²)
+phi    = f32::atan2(self.y, self.x) = arctan(y / x) → (ALT + 8730) atan2 pour retourner une valeur entre -pi et pi au lieu de -pi/2 pi/2
+theta  = f32::acos(self.z / self.distance_from_origin()) = arccos(z / r)
+
+à l'inverse :
+x = r * theta.sin() * phi.cos()
+y = r * theta.sin() * phi.sin()
+z = r * theta.cos()
+
+DCF et MonteCarlo
+![alt text](image.png)
+
+sample_r génère un r aléatoire qui suit la distribution de probabilité de l'électron. Le problème : si on tire un r au hasard entre 0 et r_max, tous les rayons sont équiprobables — ce n'est pas physique. L'électron est plus souvent proche du noyau.
+
+  La solution en trois étapes :
+
+  1. On découpe r en N intervalles et on calcule la probabilité P(r) pour chaque — c'est le PDF
+  2. On cumule ces probabilités de 0 à r_max — c'est la CDF (elle va de 0 à 1)
+  3. On tire un nombre aléatoire u entre 0 et 1, et on cherche le r où CDF(r) = u
+
+La CDF monte rapidement là où la probabilité est élevée — donc beaucoup de valeurs de u correspondent à cette zone. Elle monte lentement là où la probabilité est faible — peu de valeurs de u y tombent.
+Donc si la CDF monte vite entre 0 et 2 → la majorité des u aléatoires donnent un r entre 0 et 2 → l'électron est souvent près du noyau.
+
+le VBO stocke les coordonnées des points (x, y, z de chaque électron) directement dans la mémoire du GPU.
+
+C'est ça la clé — les données quittent la RAM du CPU pour aller dans la VRAM du GPU. Ensuite le GPU peut les lire directement à chaque frame sans aller chercher dans la RAM.
+
+le VAO mémorise le format des données : "chaque vertex = 3 floats, commençant à l'offset 0". Sans lui, il faudrait redéfinir ce format à chaque frame.
+
+
+- Model : transforme l'objet dans le monde (rotation, translation, échelle). Dans notre code, c'est la rotation angle
+  qui fait tourner l'orbitale.
+- View : simule la caméra — où elle est, où elle regarde. Dans notre code, look_at place la caméra à z=15 qui regarde
+  vers l'origine.
+- Projection : transforme la scène 3D en image 2D avec perspective — les objets lointains paraissent plus petits.
+  C'est perspective(fov, ratio, near, far).
+
+DYNAMIC_DRAW :
+C'est un hint au GPU sur le pattern d'utilisation :
+
+- STATIC_DRAW : les données sont envoyées une fois et ne changent plus — le GPU peut les optimiser en mémoire lente
+- DYNAMIC_DRAW : les données changent fréquemment — le GPU les place en mémoire plus rapide pour faciliter les mises à
+   jour
+
+Quand on change d'orbitale, on envoie 10 000 nouvelles positions au GPU. Avec DYNAMIC_DRAW on indique que ce buffer
+  sera mis à jour régulièrement, donc le GPU le gère différemment en interne.

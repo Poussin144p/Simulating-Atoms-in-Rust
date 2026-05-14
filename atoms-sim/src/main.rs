@@ -123,7 +123,7 @@ fn legendre(l: i32, m: i32, x: f64) -> f64 {
 
 fn sample_r(n: i32, l: i32) -> f64 {
     let a0 = 0.529_f64;
-    let n_points = 4096;
+    let n_points = 2048;
     let r_max = 10.0 * (n * n) as f64 * a0;
     let dr = r_max / (n_points - 1) as f64;
 
@@ -155,7 +155,7 @@ fn sample_r(n: i32, l: i32) -> f64 {
 
 
 fn sample_theta(l: i32, m: i32) -> f64 {
-    let n_points = 4096;
+    let n_points = 2048;
     let theta_max = std::f64::consts::PI;
     let dtheta = theta_max / (n_points - 1) as f64;
 
@@ -199,6 +199,19 @@ fn sample_position(n: i32, l: i32, m: i32) -> (f64, f64, f64) {
 
     return (x, y, z);
 }
+
+
+fn generate_positions(n: i32, l: i32, m: i32, count: usize) -> Vec<f32> {
+      let mut positions = Vec::new();
+      for _ in 0..count {
+          let (x, y, z) = sample_position(n, l, m);
+          positions.push(x as f32);
+          positions.push(y as f32);
+          positions.push(z as f32);
+      }
+      positions
+}
+
 
 fn main() {
 
@@ -278,17 +291,11 @@ fn main() {
         None => std::ptr::null(),
     });
 
-    // Générer les points avant rendu
-    let n_electrons = 10_000;
-    let mut positions: Vec<f32> = Vec::new();
-    for _ in 0..n_electrons {
-        let (x, y, z) = sample_position(2, 1, 0);
-        positions.push(x as f32);
-        positions.push(y as f32);
-        positions.push(z as f32);
-
-    }
-
+    let n_electrons = 5_000;
+    let mut orb_n: i32 = 2;
+    let mut orb_l: i32 = 1;
+    let mut orb_m: i32 = 0;
+    let mut positions = generate_positions(orb_n, orb_l, orb_m, n_electrons);
 
     //Créer le VBO et envoyer les données au GPU
     let mut vbo: u32 = 0;
@@ -349,8 +356,43 @@ fn main() {
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            if let glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) = event {
-                window.set_should_close(true);
+            match event {
+                glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
+                    window.set_should_close(true);
+                }
+                glfw::WindowEvent::Key(Key::Up, _, Action::Press, _) => {
+                    orb_n += 1;
+                    orb_l = orb_l.min(orb_n - 1);
+                    orb_m = orb_m.clamp(-orb_l, orb_l);
+                    positions = generate_positions(orb_n, orb_l, orb_m, n_electrons);
+                    unsafe {
+                        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+                        gl::BufferData(
+                            gl::ARRAY_BUFFER,
+                            (positions.len() * std::mem::size_of::<f32>()) as isize,
+                            positions.as_ptr() as *const _,
+                            gl::DYNAMIC_DRAW,
+                        );
+                    }
+                    println!("n={} l={} m={}", orb_n, orb_l, orb_m);
+                }
+                glfw::WindowEvent::Key(Key::Down, _, Action::Press, _) => {
+                    orb_n = (orb_n - 1).max(1);
+                    orb_l = orb_l.min(orb_n - 1);
+                    orb_m = orb_m.clamp(-orb_l, orb_l);
+                    positions = generate_positions(orb_n, orb_l, orb_m, n_electrons);
+                    unsafe {
+                        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+                        gl::BufferData(
+                            gl::ARRAY_BUFFER,
+                            (positions.len() * std::mem::size_of::<f32>()) as isize,
+                            positions.as_ptr() as *const _,
+                            gl::DYNAMIC_DRAW,
+                        );
+                    }
+                    println!("n={} l={} m={}", orb_n, orb_l, orb_m);
+                }
+                _ => {}
             }
         }
 
