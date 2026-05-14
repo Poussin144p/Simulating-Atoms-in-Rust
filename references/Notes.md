@@ -29,18 +29,14 @@ Les coordonnées sphériques permettent de décrire la position d'un électron a
 
   Maintenant les nombres quantiques. Ils définissent l'état de l'électron :
 
-  ┌─────────┬────────────┬────────────┐
-  │ Symbole │    Nom     │  Valeurs   │
-  ├─────────┼────────────┼────────────┤
-  │ n       │ principal  │ 1, 2, 3... │
-  ├─────────┼────────────┼────────────┤
-  │ l       │ orbital    │ 0 à n-1    │
-  ├─────────┼────────────┼────────────┤
-  │ m       │ magnétique │ -l à +l    │
-  └─────────┴────────────┴────────────┘
+| Symbole | Nom        | Valeurs    |
+---------|------------|------------|
+| n       | principal  | 1, 2, 3... |
+| l       | orbital    | 0 à n-1    |
+| m       | magnétique | -l à +l    |
 
-  Pour n=1 tu as l=0, m=0 — c'est l'état fondamental qu'on a simulé.
-  Pour n=2 tu as l=0,1 et m=-1,0,1 — orbitales 2s et 2p.
+Pour n=1 tu as l=0, m=0 — c'est l'état fondamental qu'on a simulé.
+Pour n=2 tu as l=0,1 et m=-1,0,1 — orbitales 2s et 2p.
 
 
 Le C++ utilise deux polynômes séparément :
@@ -134,3 +130,42 @@ utile à chaque fois.
 2. Pour l'étape 3, comment trouver l'indice où CDF[i] >= u selon toi ?
 - En pratique on utilise une recherche binaire plutôt qu'un filter linéaire — la CDF est triée, donc on peut trouver l'indice en O(log N) au lieu de O(N). En Rust :
 let idx = cdf.partition_point(|&v| v < u);
+
+
+Affichage : 
+
+c'est du code de setup qui suit une recette, pas quelque chose qu'on comprend en le lisant. Voici ce que chaque ligne fait concrètement :
+
+  GLFW — gère la fenêtre et les inputs (clavier, souris). C'est lui qui crée la fenêtre OS.
+  glfw::init(...)          // démarre la bibliothèque
+  create_window(...)       // crée la fenêtre
+  window.make_current()    // dit "cette fenêtre est la cible OpenGL active"
+  window.set_key_polling() // active la réception des événements clavier
+  poll_events()            // lit les événements depuis l'OS
+
+  GL — c'est OpenGL lui-même, qui dessine dans la fenêtre. Mais OpenGL sur Windows ne se charge pas tout seul — ses
+  fonctions sont dans les drivers GPU, pas dans des DLL standard.
+  gl::load_with(|s| ...)  // pour chaque fonction OpenGL (ClearColor, DrawArrays...),
+                           // demande à GLFW où elle se trouve dans le driver
+
+  Le match qu'on vient d'ajouter : certaines fonctions n'existent pas sur tous les GPU, donc get_proc_address retourne
+  None → on donne un pointeur nul à la place.
+
+  gl::ClearColor(...)  // dit quelle couleur utiliser pour effacer
+  gl::Clear(...)       // efface l'écran
+  swap_buffers()       // affiche ce qu'on vient de dessiner (double buffering)
+
+  Est-ce que ça compile maintenant ?
+
+
+Maintenant on va afficher les points de l'électron. Le principe OpenGL pour dessiner des points :
+
+  1. Générer N positions avec sample_position()
+  2. Les mettre dans un tableau de flottants (Vec<f32>)
+  3. Envoyer ce tableau au GPU via un VBO (Vertex Buffer Object)
+  4. Dire à OpenGL de les dessiner comme des points
+
+
+le GPU est conçu pour traiter des milliers de points en parallèle. Si on dessinait depuis le CPU, on
+enverrait les données point par point à chaque frame. Avec un VBO, on envoie tout en une fois au début, et le GPU
+dessine directement depuis sa mémoire à chaque frame.

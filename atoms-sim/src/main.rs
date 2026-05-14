@@ -1,4 +1,5 @@
 use rand::RngExt;
+use glfw::{Action, Context, Key};
 
 struct Particle {
     x: f32, y: f32, z: f32,
@@ -200,42 +201,159 @@ fn sample_position(n: i32, l: i32, m: i32) -> (f64, f64, f64) {
 
 fn main() {
 
-    // 1. Créer un Engine
-    let mut engine = Engine::new() ;
+    // // 1. Créer un Engine
+    // let mut engine = Engine::new() ;
 
-    // 2. Créer quelques particules avec Particle::new()
-    let mut particle_1 = Particle::new(0.0, 0.0, 0.0, 1, 1, 0, 0);
-    let mut particle_2 = Particle::new(1.0, 1.0, 1.0, 2, 3, 2, 2);
-    let mut particle_3 = Particle::new(2.0, 2.0, 2.0, 3, 2, 1, 1); 
+    // // 2. Créer quelques particules avec Particle::new()
+    // let mut particle_1 = Particle::new(0.0, 0.0, 0.0, 1, 1, 0, 0);
+    // let mut particle_2 = Particle::new(1.0, 1.0, 1.0, 2, 3, 2, 2);
+    // let mut particle_3 = Particle::new(2.0, 2.0, 2.0, 3, 2, 1, 1); 
 
-    // Calculer les probas
-    particle_1.compute_probability();
-    particle_2.compute_probability();
-    particle_3.compute_probability();
+    // // Calculer les probas
+    // particle_1.compute_probability();
+    // particle_2.compute_probability();
+    // particle_3.compute_probability();
 
-    // test theta/phi
-    let particle = Particle::new(1.0, 0.0, 0.0, 1, 0, 1, 1);
-    println!("theta={}, phi={}", particle.theta(), particle.phi());
+    // // test theta/phi
+    // let particle = Particle::new(1.0, 0.0, 0.0, 1, 0, 1, 1);
+    // println!("theta={}, phi={}", particle.theta(), particle.phi());
     
-    // 3. Ajouter avec add_particle()
-    engine.add_particle(particle_1);
-    engine.add_particle(particle_2);
-    engine.add_particle(particle_3);
+    // // 3. Ajouter avec add_particle()
+    // engine.add_particle(particle_1);
+    // engine.add_particle(particle_2);
+    // engine.add_particle(particle_3);
 
-    // 4. Afficher chaque particule
-    for p in &engine.particles {
-        p.display();
-    }
+    // // 4. Afficher chaque particule
+    // for p in &engine.particles {
+    //     p.display();
+    // }
 
-    println!("{}", laguerre(0, 0, 0.0));
-    println!("{}", legendre(1, 0, 1.0));  // attendu : 1.0
+    // println!("{}", laguerre(0, 0, 0.0));
+    // println!("{}", legendre(1, 0, 1.0));  // attendu : 1.0
 
-    println!("r samples pour n=1, l=0 :");
-    for _ in 0..5 {
-        println!(" r = {:.3}, theta = {:.3}", sample_r(1, 0), sample_theta(1, 0));
-    }
-    for _ in 0..5 {
+    // println!("r samples pour n=1, l=0 :");
+    // for _ in 0..5 {
+    //     println!(" r = {:.3}, theta = {:.3}", sample_r(1, 0), sample_theta(1, 0));
+    // }
+    // for _ in 0..5 {
+    //     let (x, y, z) = sample_position(2, 1, 0);
+    //     println!("x={:.3}, y={:.3}, z={:.3}", x, y, z);
+    // }
+
+    // Shader placement des points et colorisation
+    let vertex_src = r#"
+        #version 330 core
+        layout(location = 0) in vec3 pos;
+        void main() {
+            gl_Position = vec4(pos * 0.1, 1.0);
+        }
+    "#;
+
+    let fragment_src = r#"
+        #version 330 core
+        out vec4 color;
+        void main() {
+            color = vec4(0.3, 0.7, 1.0, 1.0);
+        }
+    "#;
+
+
+    // Init GLFW
+    let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
+
+    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
+    glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
+
+    // Créer la fenêtre
+    let (mut window, events) = glfw
+        .create_window(800, 600, "Atoms", glfw::WindowMode::Windowed)
+        .expect("Fenêtre GLFW impossible");
+
+    window.make_current();
+    window.set_key_polling(true);
+    gl::load_with(|s| match window.get_proc_address(s) {
+        Some(f) => f as *const _,
+        None => std::ptr::null(),
+    });
+
+    // Générer les points avant rendu
+    let n_electrons = 10_000;
+    let mut positions: Vec<f32> = Vec::new();
+    for _ in 0..n_electrons {
         let (x, y, z) = sample_position(2, 1, 0);
-        println!("x={:.3}, y={:.3}, z={:.3}", x, y, z);
+        positions.push(x as f32);
+        positions.push(y as f32);
+        positions.push(z as f32);
+
     }
+
+
+    //Créer le VBO et envoyer les données au GPU
+    let mut vbo: u32 = 0;
+    unsafe {
+        gl::GenBuffers(1, &mut vbo);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            (positions.len() * std::mem::size_of::<f32>()) as isize, 
+            positions.as_ptr() as *const _, 
+            gl::STATIC_DRAW);
+    }
+
+
+    // Créer le Vertex Array Object qui mémorise comment lire les données du VBO (3 floats : x, y, z)
+    let mut vao: u32 = 0;
+    unsafe {
+        gl::GenVertexArrays(1, &mut vao);
+        gl::BindVertexArray(vao);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+        gl::EnableVertexAttribArray(0);
+    }
+
+
+    // Compiler et lier les shaders
+    let shader_program = unsafe {
+        let vs = gl::CreateShader(gl::VERTEX_SHADER);
+        let src = std::ffi::CString::new(vertex_src).unwrap();
+        gl::ShaderSource(vs, 1, &src.as_ptr(), std::ptr::null());
+        gl::CompileShader(vs);
+
+
+        let fs = gl::CreateShader(gl::FRAGMENT_SHADER);
+        let src = std::ffi::CString::new(fragment_src).unwrap();
+        gl::ShaderSource(fs, 1, &src.as_ptr(), std::ptr::null());
+        gl::CompileShader(fs);
+
+        let program = gl::CreateProgram();
+        gl::AttachShader(program, vs);
+        gl::AttachShader(program, fs);
+        gl::LinkProgram(program);
+        gl::DeleteShader(vs);
+        gl::DeleteShader(fs);
+        program
+    };
+
+    // Boucle de rendu
+    while !window.should_close() {
+        glfw.poll_events();
+        for (_, event) in glfw::flush_messages(&events) {
+            if let glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) = event {
+                window.set_should_close(true);
+            }
+        }
+
+        unsafe {
+            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::UseProgram(shader_program);
+            gl::BindVertexArray(vao);
+            gl::PointSize(2.0);
+            gl::DrawArrays(gl::POINTS, 0, n_electrons as i32);
+        }
+
+        window.swap_buffers();
+    }
+
+
 }

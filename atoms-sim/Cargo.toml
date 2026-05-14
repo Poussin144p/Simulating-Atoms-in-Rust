@@ -5,3 +5,5 @@ edition = "2024"
 
 [dependencies]
 rand = "0.10.1"
+glfw = "0.62.0"
+gl = "0.14.0"

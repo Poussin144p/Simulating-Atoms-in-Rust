@@ -34,8 +34,8 @@ user_profile:
     - Maths quantiques (Laguerre, Legendre, Schrödinger)
 
 progress:
-  current_day: 4
-  next_topic: "Normalisation, échantillonnage Monte Carlo, CDF pour r et theta"
+  current_day: 5
+  next_topic: "OpenGL — fenêtre, boucle de rendu, afficher les points de l'électron"
   completed_days:
     - day: 1
       date: "2026-05-13"
@@ -46,6 +46,9 @@ progress:
     - day: 3
       date: "2026-05-14"
       topic: "Coordonnées sphériques, polynômes de Laguerre et Legendre, compute_probability générale (n, l, m)"
+    - day: 4
+      date: "2026-05-14"
+      topic: "Monte Carlo, CDF, sample_r / sample_theta / sample_phi / sample_position"
 
 mastery:
   ownership:
@@ -77,12 +80,16 @@ mastery:
     correct_count: 3
     last_seen: "2026-05-14"
   laguerre_legendre:
-    status: practicing
-    correct_count: 2
+    status: validated
+    correct_count: 3
     last_seen: "2026-05-14"
   quantum_numbers:
-    status: practicing
-    correct_count: 2
+    status: validated
+    correct_count: 3
+    last_seen: "2026-05-14"
+  monte_carlo_cdf:
+    status: validated
+    correct_count: 3
     last_seen: "2026-05-14"
 
 evaluations: []
