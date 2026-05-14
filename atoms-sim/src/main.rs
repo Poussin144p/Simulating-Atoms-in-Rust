@@ -281,6 +281,7 @@ fn main() {
         uniform mat4 mvp;
         void main() {
             gl_Position = mvp * vec4(pos, 1.0);
+            gl_PointSize = 50.0 / gl_Position.w;
         }
     "#;
 
@@ -288,6 +289,8 @@ fn main() {
         #version 330 core
         out vec4 color;
         void main() {
+            vec2 center = gl_PointCoord - vec2(0.5);
+            if (length(center) > 0.5) discard;
             color = vec4(0.3, 0.7, 1.0, 1.0);
         }
     "#;
@@ -310,6 +313,11 @@ fn main() {
         Some(f) => f as *const _,
         None => std::ptr::null(),
     });
+
+    unsafe {
+        gl::Enable(gl::DEPTH_TEST);
+        gl::Enable(gl::PROGRAM_POINT_SIZE);
+    }
 
     let n_electrons = 5_000;
     let mut orb_n: i32 = 2;
@@ -422,10 +430,9 @@ fn main() {
 
         unsafe {
             gl::ClearColor(0.0, 0.0, 0.0, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::UseProgram(shader_program);
             gl::BindVertexArray(vao);
-            gl::PointSize(2.0);
             angle += 0.0003;
 
             let projection = glm::perspective(800.0_f32 / 600.0, 45.0_f32.to_radians(), 0.1, 100.0);

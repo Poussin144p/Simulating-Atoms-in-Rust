@@ -232,3 +232,22 @@ C'est un hint au GPU sur le pattern d'utilisation :
 
 Quand on change d'orbitale, on envoie 10 000 nouvelles positions au GPU. Avec DYNAMIC_DRAW on indique que ce buffer
   sera mis à jour régulièrement, donc le GPU le gère différemment en interne.
+
+
+Avant de coder, une question : actuellement tous les points ont la même taille et la même couleur peu importe leur distance à la caméra. Dans le projet de référence, les points proches paraissent plus grands et plus lumineux. Comment penses-tu qu'on pourrait implémenter ça ?
+
+c'est dans le vertex shader qu'on peut modifier la taille de chaque point selon sa profondeur. OpenGL a une variable built-in gl_PointSize qu'on peut calculer dynamiquement.
+
+Actuellement dans le vertex shader : gl_Position = mvp * vec4(pos, 1.0);
+
+La position après transformation a une coordonnée w qui représente la profondeur. Plus w est grand, plus le point est loin.
+
+On peut calculer la taille comme :
+gl_PointSize = 50.0 / gl_Position.w;
+
+Mais avant ça, il faut activer le depth buffer et GL_PROGRAM_POINT_SIZE côté Rust. Ajoute juste après gl::load_with :
+
+unsafe {
+  gl::Enable(gl::DEPTH_TEST);
+  gl::Enable(gl::PROGRAM_POINT_SIZE);
+}
